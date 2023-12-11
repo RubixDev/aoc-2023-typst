@@ -63,12 +63,18 @@
   }
 }
 
+#let mark-map = (
+  "|": "┃",
+  "-": "━",
+  "L": "┗",
+  "J": "┛",
+  "7": "┓",
+  "F": "┏",
+)
 #let show-area(area, frame-counter, lel: false) = {
-//if not lel { return }
   if frame-counter < frames-start or frame-counter >= frames-start + frames-count {
     return
   }
-  //[- AAAAAAAA #frame-counter]
   if calc.rem(frame-counter, 10) != 0 { return }
   pagebreak(weak: true)
   set par(leading: 0.3em)
@@ -78,11 +84,12 @@
         gray
       } else if tile in "|-LJ7F" {
         orange
-      } else if tile == "x" {
+      } else if tile in mark-map.values() {
         blue
-      } else if tile == "A" {
+      } else if tile == "█" {
         red
-      } else if tile == "B" {
+      } else if tile == " " {
+        tile = "█"
         green
       }
       set text(fill: color)
@@ -139,12 +146,13 @@
 #while pos != start-pos {
   let steps-inner = 0
   while steps-inner < 10000 and pos != start-pos {
-    prev-dir = connection-map.at(area.at(pos.y).at(pos.x)).find(it => it != inverse(prev-dir))
+    let tile = area.at(pos.y).at(pos.x)
+    prev-dir = connection-map.at(tile).find(it => it != inverse(prev-dir))
 
     // save the moves to replay in part 2
-    moves.push((tile: area.at(pos.y).at(pos.x), dir: prev-dir))
+    moves.push((tile: tile, dir: prev-dir))
     // and mark the main loop for part 2
-    area.at(pos.y).at(pos.x) = "x"
+    area.at(pos.y).at(pos.x) = mark-map.at(tile)
     show-area(area, frame-counter)
     frame-counter += 1
 
@@ -155,7 +163,7 @@
 }
 
 // part 2
-#{ area.at(start-pos.y).at(start-pos.x) = "x" }
+#{ area.at(start-pos.y).at(start-pos.x) = mark-map.at(area.at(start-pos.y).at(start-pos.x)) }
 #show-area(area, frame-counter)
 #(frame-counter += 1)
 #let spread-area(start, kind, area, frame-counter) = {
@@ -163,7 +171,7 @@
   let to-visit = (start,)
   let content = while to-visit.len() > 0 {
     let pos = to-visit.remove(0)
-    if pos.x < 0 or pos.y < 0 or pos.x >= area.at(0).len() or pos.y >= area.len() or area.at(pos.y).at(pos.x) in "ABx" {
+    if pos.x < 0 or pos.y < 0 or pos.x >= area.at(0).len() or pos.y >= area.len() or area.at(pos.y).at(pos.x) in "█ " + mark-map.values().join() {
       continue
     }
     area.at(pos.y).at(pos.x) = kind
@@ -174,7 +182,7 @@
       if new-pos.x < 0 or new-pos.y < 0 or new-pos.x >= area.at(0).len() or new-pos.y >= area.len() {
         continue
       }
-      if area.at(new-pos.y).at(new-pos.x) not in "ABx" {
+      if area.at(new-pos.y).at(new-pos.x) not in "█ " + mark-map.values().join() {
         to-visit.push(new-pos)
       }
     }
@@ -199,17 +207,16 @@
 #for m in moves {
   let ab = ab-map.at(m.tile + repr(m.dir))
   for dir in ab.a {
-    let (new-area, frames, added-frame-count) = spread-area(move(pos, dir), "A", area, frame-counter)
+    let (new-area, frames, added-frame-count) = spread-area(move(pos, dir), "█", area, frame-counter)
     area = new-area
     frame-counter += added-frame-count
     frames
   }
   for dir in ab.b {
-    let (new-area, frames, added-frame-count) = spread-area(move(pos, dir), "B", area, frame-counter)
+    let (new-area, frames, added-frame-count) = spread-area(move(pos, dir), " ", area, frame-counter)
     area = new-area
     frame-counter += added-frame-count
     frames
   }
   pos = move(pos, m.dir)
 }
-//#show-area(area, frame-counter, lel: true)
